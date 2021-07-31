@@ -154,47 +154,85 @@ inline void apply_imgui_style()
 #endif
 }
 
-VOID FORCEINLINE XUSB_TO_DS4_REPORT(
-	_Out_ PXUSB_REPORT Input,
-	_Out_ PDS4_REPORT Output
+//
+// Sets the current state of the D-PAD on a DualShock 4 report.
+// 
+VOID FORCEINLINE DS4_EX_SET_DPAD(
+	_Out_ PDS4_REPORT_EX Report,
+	_In_ DS4_DPAD_DIRECTIONS Dpad
 )
 {
-	if (Input->wButtons & XUSB_GAMEPAD_BACK) Output->bSpecial |= DS4_SPECIAL_BUTTON_TOUCHPAD;
-	if (Input->wButtons & XUSB_GAMEPAD_START) Output->wButtons |= DS4_BUTTON_OPTIONS;
-	if (Input->wButtons & XUSB_GAMEPAD_LEFT_THUMB) Output->wButtons |= DS4_BUTTON_THUMB_LEFT;
-	if (Input->wButtons & XUSB_GAMEPAD_RIGHT_THUMB) Output->wButtons |= DS4_BUTTON_THUMB_RIGHT;
-	if (Input->wButtons & XUSB_GAMEPAD_LEFT_SHOULDER) Output->wButtons |= DS4_BUTTON_SHOULDER_LEFT;
-	if (Input->wButtons & XUSB_GAMEPAD_RIGHT_SHOULDER) Output->wButtons |= DS4_BUTTON_SHOULDER_RIGHT;
-	if (Input->wButtons & XUSB_GAMEPAD_GUIDE) Output->bSpecial |= DS4_SPECIAL_BUTTON_PS;
-	if (Input->wButtons & XUSB_GAMEPAD_A) Output->wButtons |= DS4_BUTTON_CROSS;
-	if (Input->wButtons & XUSB_GAMEPAD_B) Output->wButtons |= DS4_BUTTON_CIRCLE;
-	if (Input->wButtons & XUSB_GAMEPAD_X) Output->wButtons |= DS4_BUTTON_SQUARE;
-	if (Input->wButtons & XUSB_GAMEPAD_Y) Output->wButtons |= DS4_BUTTON_TRIANGLE;
+	Report->Report.wButtons &= ~0xF;
+	Report->Report.wButtons |= (USHORT)Dpad;
+}
 
-	Output->bTriggerL = Input->bLeftTrigger;
-	Output->bTriggerR = Input->bRightTrigger;
+VOID FORCEINLINE DS4_REPORT_EX_INIT(
+	_Out_ PDS4_REPORT_EX Report
+)
+{
+	RtlZeroMemory(Report, sizeof(DS4_REPORT_EX));
+	Report->Report.bThumbLX = 0x80;
+	Report->Report.bThumbLY = 0x80;
+	Report->Report.bThumbRX = 0x80;
+	Report->Report.bThumbRY = 0x80;
+	Report->Report.wTimestamp = 0x63FD;
+	Report->Report.bBatteryLvl = 0x06;
+	Report->Report.bBatteryLvlSpecial = 0x1B;
+	Report->Report.sCurrentTouch.bIsUpTrackingNum1 = 0x80;
+	Report->Report.sCurrentTouch.bIsUpTrackingNum2 = 0x80;
+	Report->Report.sPreviousTouch[0].bIsUpTrackingNum1 = 0x80;
+	Report->Report.sPreviousTouch[0].bIsUpTrackingNum2 = 0x80;
+	Report->Report.sPreviousTouch[1].bIsUpTrackingNum1 = 0x80;
+	Report->Report.sPreviousTouch[1].bIsUpTrackingNum2 = 0x80;
+	Report->ReportBuffer[61] = 0x80;
+	DS4_EX_SET_DPAD(Report, DS4_BUTTON_DPAD_NONE);
+}
 
-	if (Input->bLeftTrigger > 0)Output->wButtons |= DS4_BUTTON_TRIGGER_LEFT;
-	if (Input->bRightTrigger > 0)Output->wButtons |= DS4_BUTTON_TRIGGER_RIGHT;
+VOID FORCEINLINE XUSB_TO_DS4_REPORT_EX(
+	_Out_ PXUSB_REPORT Input,
+	_Out_ PDS4_REPORT_EX Output
+)
+{
+	if (Input->wButtons & XUSB_GAMEPAD_BACK) {
+		Output->Report.bSpecial |= DS4_SPECIAL_BUTTON_TOUCHPAD;
+		Output->Report.bTouchPacketsN = 1;
+		Output->Report.sCurrentTouch.bIsUpTrackingNum1 = 0x1;
+	}
+	if (Input->wButtons & XUSB_GAMEPAD_START) Output->Report.wButtons |= DS4_BUTTON_OPTIONS;
+	if (Input->wButtons & XUSB_GAMEPAD_LEFT_THUMB) Output->Report.wButtons |= DS4_BUTTON_THUMB_LEFT;
+	if (Input->wButtons & XUSB_GAMEPAD_RIGHT_THUMB) Output->Report.wButtons |= DS4_BUTTON_THUMB_RIGHT;
+	if (Input->wButtons & XUSB_GAMEPAD_LEFT_SHOULDER) Output->Report.wButtons |= DS4_BUTTON_SHOULDER_LEFT;
+	if (Input->wButtons & XUSB_GAMEPAD_RIGHT_SHOULDER) Output->Report.wButtons |= DS4_BUTTON_SHOULDER_RIGHT;
+	if (Input->wButtons & XUSB_GAMEPAD_GUIDE) Output->Report.bSpecial |= DS4_SPECIAL_BUTTON_PS;
+	if (Input->wButtons & XUSB_GAMEPAD_A) Output->Report.wButtons |= DS4_BUTTON_CROSS;
+	if (Input->wButtons & XUSB_GAMEPAD_B) Output->Report.wButtons |= DS4_BUTTON_CIRCLE;
+	if (Input->wButtons & XUSB_GAMEPAD_X) Output->Report.wButtons |= DS4_BUTTON_SQUARE;
+	if (Input->wButtons & XUSB_GAMEPAD_Y) Output->Report.wButtons |= DS4_BUTTON_TRIANGLE;
 
-	if (Input->wButtons & XUSB_GAMEPAD_DPAD_UP) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_NORTH);
-	if (Input->wButtons & XUSB_GAMEPAD_DPAD_RIGHT) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_EAST);
-	if (Input->wButtons & XUSB_GAMEPAD_DPAD_DOWN) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_SOUTH);
-	if (Input->wButtons & XUSB_GAMEPAD_DPAD_LEFT) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_WEST);
+	Output->Report.bTriggerL = Input->bLeftTrigger;
+	Output->Report.bTriggerR = Input->bRightTrigger;
+
+	if (Input->bLeftTrigger > 0)Output->Report.wButtons |= DS4_BUTTON_TRIGGER_LEFT;
+	if (Input->bRightTrigger > 0)Output->Report.wButtons |= DS4_BUTTON_TRIGGER_RIGHT;
+
+	if (Input->wButtons & XUSB_GAMEPAD_DPAD_UP) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_NORTH);
+	if (Input->wButtons & XUSB_GAMEPAD_DPAD_RIGHT) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_EAST);
+	if (Input->wButtons & XUSB_GAMEPAD_DPAD_DOWN) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_SOUTH);
+	if (Input->wButtons & XUSB_GAMEPAD_DPAD_LEFT) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_WEST);
 
 	if (Input->wButtons & XUSB_GAMEPAD_DPAD_UP
-		&& Input->wButtons & XUSB_GAMEPAD_DPAD_RIGHT) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_NORTHEAST);
+		&& Input->wButtons & XUSB_GAMEPAD_DPAD_RIGHT) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_NORTHEAST);
 	if (Input->wButtons & XUSB_GAMEPAD_DPAD_RIGHT
-		&& Input->wButtons & XUSB_GAMEPAD_DPAD_DOWN) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_SOUTHEAST);
+		&& Input->wButtons & XUSB_GAMEPAD_DPAD_DOWN) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_SOUTHEAST);
 	if (Input->wButtons & XUSB_GAMEPAD_DPAD_DOWN
-		&& Input->wButtons & XUSB_GAMEPAD_DPAD_LEFT) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_SOUTHWEST);
+		&& Input->wButtons & XUSB_GAMEPAD_DPAD_LEFT) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_SOUTHWEST);
 	if (Input->wButtons & XUSB_GAMEPAD_DPAD_LEFT
-		&& Input->wButtons & XUSB_GAMEPAD_DPAD_UP) DS4_SET_DPAD(Output, DS4_BUTTON_DPAD_NORTHWEST);
+		&& Input->wButtons & XUSB_GAMEPAD_DPAD_UP) DS4_EX_SET_DPAD(Output, DS4_BUTTON_DPAD_NORTHWEST);
 
-	Output->bThumbLX = ((Input->sThumbLX + ((USHRT_MAX / 2) + 1)) / 257);
-	Output->bThumbLY = (-(Input->sThumbLY + ((USHRT_MAX / 2) - 1)) / 257);
-	Output->bThumbLY = (Output->bThumbLY == 0) ? 0xFF : Output->bThumbLY;
-	Output->bThumbRX = ((Input->sThumbRX + ((USHRT_MAX / 2) + 1)) / 257);
-	Output->bThumbRY = (-(Input->sThumbRY + ((USHRT_MAX / 2) + 1)) / 257);
-	Output->bThumbRY = (Output->bThumbRY == 0) ? 0xFF : Output->bThumbRY;
+	Output->Report.bThumbLX = ((Input->sThumbLX + ((USHRT_MAX / 2) + 1)) / 257);
+	Output->Report.bThumbLY = (-(Input->sThumbLY + ((USHRT_MAX / 2) - 1)) / 257);
+	Output->Report.bThumbLY = (Output->Report.bThumbLY == 0) ? 0xFF : Output->Report.bThumbLY;
+	Output->Report.bThumbRX = ((Input->sThumbRX + ((USHRT_MAX / 2) + 1)) / 257);
+	Output->Report.bThumbRY = (-(Input->sThumbRY + ((USHRT_MAX / 2) + 1)) / 257);
+	Output->Report.bThumbRY = (Output->Report.bThumbRY == 0) ? 0xFF : Output->Report.bThumbRY;
 }

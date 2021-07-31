@@ -351,15 +351,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 					break;
 				case DS4:
 				{
-					DS4_REPORT rep;
-					DS4_REPORT_INIT(&rep);
+					DS4_REPORT_EX rep;
+					DS4_REPORT_EX_INIT(&rep);
 
 					// The DualShock 4 expects a different report format, so we call a helper 
 					// function which will translate buttons and axes 1:1 from XUSB to DS4
 					// format and submit it to the update function afterwards.
-					XUSB_TO_DS4_REPORT(reinterpret_cast<PXUSB_REPORT>(&state.Gamepad), &rep);
+					XUSB_TO_DS4_REPORT_EX(reinterpret_cast<PXUSB_REPORT>(&state.Gamepad), &rep);
 
-					vigem_target_ds4_update(client, pad.target, rep);
+					vigem_target_ds4_update_ex(client, pad.target, rep);
 				}
 				break;
 				}
